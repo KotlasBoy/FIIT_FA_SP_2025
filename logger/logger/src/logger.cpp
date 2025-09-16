@@ -89,3 +89,5 @@ std::string logger::current_time_to_string()
 
     return result_stream.str();
 }
+
+

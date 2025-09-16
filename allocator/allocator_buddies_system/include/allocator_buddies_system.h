@@ -53,16 +53,14 @@ private:
     /**
      * TODO: You must improve it for alignment support
      */
-
     static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(allocator_dbg_helper*) + sizeof(fit_mode) + sizeof(unsigned char) + sizeof(std::mutex);
-
-    static constexpr const size_t occupied_block_metadata_size = sizeof(block_metadata) + sizeof(void*);
+   static constexpr const size_t occupied_block_metadata_size = sizeof(block_metadata) + sizeof(void*);
 
     static constexpr const size_t free_block_metadata_size = sizeof(block_metadata);
-
-    static constexpr const size_t min_k = __detail::nearest_greater_k_of_2(occupied_block_metadata_size);
+   static constexpr const size_t min_k = __detail::nearest_greater_k_of_2(occupied_block_metadata_size);
 
 public:
+
 
     explicit allocator_buddies_system(
             size_t space_size_power_of_two,
@@ -72,23 +70,23 @@ public:
 
     allocator_buddies_system(
         allocator_buddies_system const &other);
-    
+
     allocator_buddies_system &operator=(
         allocator_buddies_system const &other);
-    
+
     allocator_buddies_system(
         allocator_buddies_system &&other) noexcept;
-    
+
     allocator_buddies_system &operator=(
         allocator_buddies_system &&other) noexcept;
 
     ~allocator_buddies_system() override;
 
 public:
-    
+
     [[nodiscard]] void *do_allocate_sm(
         size_t size) override;
-    
+
     void do_deallocate_sm(
         void *at) override;
 
@@ -96,15 +94,36 @@ public:
 
     inline void set_fit_mode(
         allocator_with_fit_mode::fit_mode mode) override;
+    std::mutex& get_mutex() const noexcept;//+
+    allocator_with_fit_mode::fit_mode& get_fit_mode() const noexcept;
 
+    void *get_first(size_t size) const noexcept;
+
+    void *get_best(size_t size) const noexcept;
+
+    void *get_worst(size_t size) const noexcept;
 
     std::vector<allocator_test_utils::block_info> get_blocks_info() const noexcept override;
+    inline void* slide(void* mem, size_t size) const noexcept;
 
+    static size_t pow_2(size_t power_of_2) noexcept;
+
+    inline size_t get_size_block(void* current_block) const noexcept;
+
+    inline size_t get_size_full() const noexcept;
+    unsigned char get_space_size_power() const;
+
+    void* find_suitable_block(size_t required_k, allocator_with_fit_mode::fit_mode mode) const;
+    static std::string get_info_in_string(const std::vector<allocator_test_utils::block_info>& vec) noexcept;
+    void* get_twin(void* current_block) noexcept;
 private:
+    void fill_allocator_fields(size_t space_size,
+            std::pmr::memory_resource *parent_allocator,
+            logger *logger,
+            allocator_with_fit_mode::fit_mode allocate_fit_mode);
 
-    
     inline logger *get_logger() const override;
-    
+
     inline std::string get_typename() const override;
 
     std::vector<allocator_test_utils::block_info> get_blocks_info_inner() const override;
@@ -147,7 +166,7 @@ private:
     buddy_iterator begin() const noexcept;
 
     buddy_iterator end() const noexcept;
-    
+
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H

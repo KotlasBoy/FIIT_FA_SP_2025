@@ -1,6 +1,6 @@
 #include "../include/logger_builder.h"
 
-logger::severity logger_builder::string_to_severity(
+logger::severity logger_builder::string_to_severity(        //str to sev
     std::string const &severity_string)
 {
     if (severity_string == "TRACE")
@@ -30,3 +30,5 @@ logger::severity logger_builder::string_to_severity(
 
     throw std::out_of_range("invalid severity string value");
 }
+
+

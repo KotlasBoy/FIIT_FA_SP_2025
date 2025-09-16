@@ -3,12 +3,12 @@
 
 #include <iostream>
 
-class logger
+class logger    //Абстрактный класс
 {
 
 public:
-
-    enum class severity
+                            //Severity -- серьёзность бага
+    enum class severity     //уровни важности сообщений
     {
         trace,
         debug,
@@ -17,20 +17,21 @@ public:
         error,
         critical
     };
+    // Это вложенный тип, поэтому вызывается через logger::severity
 
 public:
-
-    virtual ~logger() noexcept = default;
+                                                            //Virtual -- can be override in derived class
+    virtual ~logger() noexcept = default;                   //noexcept -- won't throw any exception
 
 public:
-
-    virtual logger& log(
+                                                //Можно реализовать цепочки вызовов
+    virtual logger& log(                        //принимает msg, sev и вызывает соотв. обёртку
         std::string const &message,
-        logger::severity severity) & = 0;
+        logger::severity severity) & = 0;       //lvalue objects    // = 0 - pure virtual
 
 public:
 
-    logger& trace(
+    logger& trace (                             //TODO: all wrappers are done
         std::string const &message) &;
 
     logger& debug(
@@ -48,16 +49,16 @@ public:
     logger& critical(
         std::string const &message) &;
 
-protected:
-
-    static std::string severity_to_string(
+protected:                                  //TODO: all helpers are done
+    //Вспомогательные методы для преобразования параметров в строку
+    static std::string severity_to_string(              //severity code to str
         logger::severity severity);
 
-    static std::string current_datetime_to_string();
+    static std::string current_datetime_to_string();    //date && time to str
 
-    static std::string current_date_to_string();
+    static std::string current_date_to_string();        //date to str
 
-    static std::string current_time_to_string();
+    static std::string current_time_to_string();        //time to str
 
 };
 

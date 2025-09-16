@@ -2,7 +2,7 @@
 #define MP_OS_FRACTION_H
 
 #include <big_int.h>
-#include <not_implemented.h>
+//#include <not_implemented.h>
 #include <concepts>
 
 class fraction final
@@ -26,6 +26,8 @@ public:
 
 public:
 
+    fraction fraction::abs() const;
+
     fraction &operator+=(fraction const &other) &;
 
     fraction operator+(fraction const &other) const;
@@ -39,6 +41,8 @@ public:
     fraction operator*(fraction const &other) const;
 
     fraction &operator/=(fraction const &other) &;
+
+    fraction fraction::operator-() const;
 
     fraction operator/(fraction const &other) const;
 

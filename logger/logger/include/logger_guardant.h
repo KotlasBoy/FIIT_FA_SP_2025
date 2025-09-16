@@ -1,6 +1,8 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_LOGGER_GUARDANT_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_LOGGER_GUARDANT_H
 
+// mix in class. Предоставляет готовую реализацию методов логирования для других классов
+
 #include "logger.h"
 
 class logger_guardant
@@ -8,7 +10,7 @@ class logger_guardant
 
 public:
 
-    virtual ~logger_guardant() noexcept = default;
+    virtual ~logger_guardant() noexcept = default;      // вирт дестр
 
 public:
 
@@ -16,7 +18,7 @@ public:
         std::string const &message,
         logger::severity severity) &;
 
-    logger_guardant &trace_with_guard(
+    logger_guardant &trace_with_guard(              //Обёртки для log_with_guard
         std::string const &message) &;
 
     logger_guardant &debug_with_guard(
@@ -36,8 +38,8 @@ public:
 
 protected:
 
-    inline virtual logger *get_logger() const = 0;
-
+    inline virtual logger *get_logger() const = 0;          // Нужно реализовать метоод в классе-наследнике.
+                                                            // 
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_LOGGER_GUARDANT_H

@@ -26,16 +26,16 @@ public:
         logger *logger = nullptr);
     
     ~allocator_global_heap() override;
-    
+
     allocator_global_heap(
         allocator_global_heap const &other);
-    
+
     allocator_global_heap &operator=(
         allocator_global_heap const &other);
-    
+
     allocator_global_heap(
         allocator_global_heap &&other) noexcept;
-    
+
     allocator_global_heap &operator=(
         allocator_global_heap &&other) noexcept;
 
@@ -50,7 +50,7 @@ public:
     bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override;
 
 private:
-    
+
     inline logger *get_logger() const override;
 
 private:
