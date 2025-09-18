@@ -44,6 +44,8 @@ error_state initial_page_func(User** all_users, size_t *users_amount, size_t *us
 error_state authorization (User** all_users, size_t *users_amount, size_t *users_capacity, User **current_user);
 error_state sign_in_func(User** all_users, size_t *users_amount, User **current_user);
 error_state sign_up_func(User** all_users, size_t *users_amount, size_t *user_capacity, User **current_user);
+void show_commands();
+
 
 // helpers
 error_state is_valid_login(char current_login[]);

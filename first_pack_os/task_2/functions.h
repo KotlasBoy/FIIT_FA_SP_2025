@@ -1,35 +1,39 @@
+#ifndef _FUNCTIONS_H_
+#define _FUNCTIONS_H_
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <stdbool.h>
+#include <ctype.h>
+#include <limits.h>
+#include <math.h>
+#include <sys/types.h>
+#include <limits.h>
 #include <stdint.h>
-#include <pthread.h>
-//#include <limits.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <sys/sem.h> ???
+#include <sys/sem.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
 
-#define FILENAME_MAX 512
-
-typedef enum {
-    COOL,
-    FAILURE, 
-    MEMORY_ERROR, 
-    NULLPTR,
+typedef enum Status
+{
+    SUCCESS,
     INPUT_ERROR,
-    WRONG_PARAMETER,
-    OVERFLOW,
-    FILE_ERROR
-} error_status;
+    MEMORY_ERROR,
+    FILE_OPEN_ERROR,
+    NOT_FOUND,
+    FORK_ERROR,
+    RW_ERROR
+} status;
 
+status mask(const char *file_name, const char *_mask, size_t *_count);
+status find_string(char const **file_paths, size_t file_count, const char *pattern, char *found_in, char *flag_found);
+status xor_blocks(const char *filename, int N, uint64_t *result);
+status copy_file(const char *file_path, size_t n);
+status string_to_size_t(const char *str, size_t *result);
 
-error_status string_to_uint32(uint32_t *result, const char *str);
-error_status string_to_mask(uint32_t *result, const char *str);
-
-error_status xor_n (char *path, short n);
-error_status mask_hex (char *path, char *mask);
-error_status copy_n (char *path, uint32_t n);
-error_status deep_copy (char* dest_path, char* src_path);
-
-error_status find_str(char **paths, int amount_of_paths, const char *to_find, char *found_in, char *flag_found);
+#endif

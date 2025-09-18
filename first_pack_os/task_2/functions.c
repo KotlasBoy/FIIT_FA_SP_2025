@@ -1,240 +1,104 @@
 #include "functions.h"
 
-
-error_status string_to_uint32(uint32_t *result, const char *str)
+status string_to_uint32(const char *str, u_int32_t *result)
 {
     char *endinp;
     unsigned long res;
-
     if (!str || !result)
         return MEMORY_ERROR;
-
-    res = strtoul(str, &endinp, 10);
-    if (res > UINT32_MAX)
-        return INPUT_ERROR;
-    if (*endinp != '\0')
-        return INPUT_ERROR;
-
-    *result = (uint32_t)res;
-    return COOL;
-}
-
-error_status string_to_mask(uint32_t *result, const char *str)
-{
-    char *endinp;
-    unsigned long res;
-
-    if (!str || !result)
-        return MEMORY_ERROR;
-
     res = strtoul(str, &endinp, 16);
     if (res > UINT32_MAX)
         return INPUT_ERROR;
     if (*endinp != '\0')
         return INPUT_ERROR;
-
-    *result = (uint32_t)res;
-    return COOL;
+    *result = (u_int32_t)res;
+    return SUCCESS;
 }
 
-error_status mask_hex(char *path, char *mask) {
-    if (!path || !mask)
-        return NULLPTR;
-    
-    FILE *input;
-    char *abs_path;
-    uint32_t num_mask, result = 0;
-    unsigned int buffer = 0;
-    if(string_to_mask(&num_mask, mask) != COOL)
-        return FAILURE;
-    
-    if (get_absolute_path(path, abs_path) != COOL){
-        printf("Problem to find <%s> path\n", path);
-        return FAILURE;
-    }
-    input = fopen(abs_path, "rb");
-    if (!input)
-        return FILE_ERROR;
-
-
-    while (fread(buffer, sizeof(unsigned int), 1, input) > 0){
-        if ((buffer & num_mask) > 0)
-            ++result;
-    }
-    if (result)
-        printf("\tThe result of operattion is %lu\n", result);
-    else
-        printf("\tOperation was failed\n");
-
-    return COOL;
-}
-
-error_status xorN (char *path, short n){
-    if (!path)
-        return NULLPTR;
-    
-    char *abs_path;
-    if (get_absolute_path(path, abs_path) != COOL){
-        printf("Problem to find <%s> path\n", path);
-        return FAILURE;
-    }
-    
-    unsigned short buffer_length = 1;
-    FILE *input = fopen(abs_path, "rb");
-    if (!input)
-        return FILE_ERROR;
-
-    char *buffer, *result;
-    for(int i = 0; i < n; ++i) 
-        buffer_length *= 2;
-
-    buffer = (char *) malloc(sizeof(unsigned char) * buffer_length);
-    if (!buffer) {
-        fclose(input);
+status string_to_size_t(const char *str, size_t *result)
+{
+    char *endinp;
+    unsigned long long res;
+    if (!str || !result)
         return MEMORY_ERROR;
-    }
+    res = strtoull(str, &endinp, 10);
+    if (res >= SIZE_MAX)
+        return INPUT_ERROR;
+    if (*endinp != '\0')
+        return INPUT_ERROR;
+    *result = (size_t)res;
+    return SUCCESS;
+}
 
-    result = (char*) malloc(sizeof(unsigned char) * buffer_length);
-    if (!result) {
-        fclose(input);
-        free(buffer);
+status mask(const char *file_name, const char *_mask, size_t *_count)
+{
+    u_int32_t mask, num32;
+    size_t count = 0;
+    int tst;
+    FILE *file;
+    if (!file_name || !_mask)
         return MEMORY_ERROR;
+
+    if (strlen(_mask) > 8 || string_to_uint32(_mask, &mask))
+        return INPUT_ERROR;
+
+    file = fopen(file_name, "rb");
+    if (!file)
+        return FILE_OPEN_ERROR;
+
+    while ((tst = fread(&num32, sizeof(uint32_t), 1, file)) == 1)
+    {
+        if ((mask & num32) == mask)
+            count++;
     }
+    fclose(file);
 
-    for (int i = 0; i < buffer_length; ++i) {
-        buffer[i] = result[i] = 0;
-    }
-
-    while (fread(buffer, sizeof(unsigned char), buffer_length, input) > 0) {
-        for(unsigned short i = 0; i < buffer_length; ++i) {
-            result[i] ^= buffer[i];
-        }
-    }
-
-    printf("\t XOR result is: <%s>\n", result);
-    fclose(input);
-    free(buffer);
-    free(result);
-
-    return COOL;
+    *_count = count;
+    return SUCCESS;
 }
 
-error_status copy_n (char *path, uint32_t n){
-    if (!path)
-        return NULLPTR;
-    
-    char *abs_path;
-    if (get_absolute_path(path, abs_path) != COOL){
-        printf("Problem to find <%s> path\n", path);
-        return FAILURE;
-    }
-
-    for (int i = 0; i < n; ++i) {
-        pid_t pid = fork();
-
-        if (pid > 0){           //parent
-            continue;
-        } else if (pid == 0) {  //child
-            char *new_file_path = NULL, *extension = '.';
-            char *dot_position = strrchr(abs_path, '.');
-
-            if (!dot_position) {
-                sprintf(new_file_path, "%s_%d", abs_path, i);
-            }
-            else {
-                unsigned short extension_length = strlen(abs_path) - strlen(dot_position);
-                char *file_number;
-
-                strncpy(new_file_path, abs_path, strlen(abs_path) - extension_length);      // ".../name"
-                strcat(extension, dot_position);                                            // ".txt"
-                sprintf(file_number, "_%d", i);                                             // "_5"
-                strcat(new_file_path, file_number);                                         // ".../name_5"
-                strcat(new_file_path, extension);                                           // ".../name_5.txt"
-            }
-        
-            if (deep_copy(new_file_path, abs_path) != COOL)
-                printf("\t%d copy failed\n", i);
-            else 
-                printf("\t copy %d created\n", i);
-            exit(COOL);
-        }
-        else {
-            printf("\t fork() failed on %d step\n", i);
-            return FAILURE;
-        }
-    }
-    return COOL;
-}
-
-error_status deep_copy (char* dest_path, char* src_path) {
-    if (!dest_path || !src_path)
-        return NULLPTR;
-
-    FILE *dest, *src;
-
-    dest = fopen(dest_path, "wb");
-    if (!dest)
-        return FILE_ERROR;
-
-    src = fopen(src_path, "rb");
-    if (!src) {
-        fclose (dest_path);
-        return FILE_ERROR;
-    }
-
-    unsigned char ch;
-    while (fread(&ch, sizeof(unsigned char), sizeof(ch), src)) {
-        if (fwrite(&ch, sizeof(unsigned char), sizeof(ch), dest) != sizeof(ch)){
-            printf("\tDeep coopy error\n");
-            fclose(src);
-            return FILE_ERROR;
-        }
-    }
-
-    fclose(dest);
-    fclose(src);
-
-    return COOL;
-}
-
-error_status find_str(char **paths, int amount_of_paths, const char *to_find, char *found_in, char *flag_found) {
-    if (!paths || !to_find)
-        return NULLPTR;
-
-    int shm_id = 0, idx = 0, to_find_size = strlen(to_find);
-    char *shared, ch;
+status find_string(const char **file_paths, size_t file_count, const char *pattern, char *found_in, char *flag_found)
+{
+    char *shared;
+    char ch;
+    size_t i, idx = 0, pattern_size = strlen(pattern);
     pid_t pid;
+    int shm_id;
 
+    if (!file_paths || !pattern || !found_in || !flag_found)
+        return MEMORY_ERROR;
 
-    shm_id == shmget(IPC_PRIVATE, (amount_of_paths + 1) * sizeof(char), IPC_CREAT | 0666);
+    shm_id = shmget(IPC_PRIVATE, (file_count + 1) * sizeof(char), IPC_CREAT | 0666);
 
     if (shm_id == -1)
         return MEMORY_ERROR;
 
-    shared = (char *) shmat(shm_id, NULL, 0);
-    if (shared == (void *)-1) {
+    shared = (char *)shmat(shm_id, NULL, 0);
+    if (shared == (void *)-1)
+    {
         shmctl(shm_id, IPC_RMID, NULL);
         return MEMORY_ERROR;
     }
 
-    memset(shared, 0, amount_of_paths + 1);
+    memset(shared, 0, file_count + 1);
 
-    for (int i = 0; i < amount_of_paths; ++i)
+    // дочерние процессы в каждом файле
+    for (i = 0; i < file_count; ++i)
     {
         pid = fork();
         if (pid == 0)
-        { // Дочерний процесс
-            FILE *file = fopen(paths[i], "r");
+        { 
+            FILE *file = fopen(file_paths[i], "r");
             if (!file)
-                exit(FILE_ERROR);
+                exit(FILE_OPEN_ERROR);
 
             while ((ch = fgetc(file)) != EOF)
             {
-            if (to_find[idx] == ch)
+                if (pattern[idx] == ch)
                 {
-                    if (idx == to_find_size - 1)
+                    if (idx == pattern_size - 1)
                     {
-                        shared[amount_of_paths] = 1;
+                        shared[file_count] = 1;
                         shared[i] = 1;
                         break;
                     }
@@ -249,120 +113,179 @@ error_status find_str(char **paths, int amount_of_paths, const char *to_find, ch
 
             fclose(file);
 
-            exit(COOL);
+            exit(SUCCESS);
         }
         else if (pid < 0)
         {
             shmdt(shared);
             shmctl(shm_id, IPC_RMID, NULL);
-            return FAILURE;
+            return FORK_ERROR;
         }
     }
 
-    // Ожидание завершения всех дочерних процессов
-    for (int i = 0; i < amount_of_paths; i++)
+    for (int i = 0; i < file_count; i++)
     {
         wait(NULL);
     }
 
-    // Копируем результаты из разделяемой памяти
-    *flag_found = shared[amount_of_paths];
+    *flag_found = shared[file_count];
 
-    memcpy(found_in, shared, amount_of_paths * sizeof(char));
+    memcpy(found_in, shared, file_count * sizeof(char));
 
-    // Освобождаем ресурсы
     shmdt(shared);
     shmctl(shm_id, IPC_RMID, NULL);
 
-    return COOL;
+    return SUCCESS;
 }
 
+status xor_blocks(const char *filename, int N, uint64_t *result)
+{
+    FILE *fp;
+    uint64_t block_size_bits = 1ULL << N;
+    uint64_t xor_sum = 0, current_block_value = 0;
+    int i, bit_count = 0, current_bit;
+    uint8_t byte;
 
-
-error_status get_absolute_path(char* current_path, char* absolute_path){
-
-    if (!current_path || !absolute_path){
-        return NULLPTR;
-    }
-
-    char current_dir[FILENAME_MAX + 1];                         // TODO:  #define FILENAME_MAX = number
-    getcwd(current_dir, FILENAME_MAX);                          // TODO: include <stdio.h>
-    if (current_dir == NULL){
-        return NULLPTR;
-    }
-
-    int curr_dir_len = strlen(current_dir);     //without \n
-    int curr_path_len = strlen(current_path);
-    int curr_elem = 0, valid_char_count = 0;
-    int delete_amount = 0;
-
-    if(current_path[curr_path_len - 1] == '/'){     //file can't end with '/'
-        return WRONG_PARAMETER;
-    }    
-    if (current_path[0] == '/'){                    // already absolute for UNIX system
-        strcpy(absolute_path, current_path);
-        return COOL;
-    }
-
-    char* dirty_abs_path = (char*) malloc(sizeof(char) * (curr_dir_len + curr_path_len + 2));       // + / + \n
-    if(!dirty_abs_path)
+    if (!filename || !result)
         return MEMORY_ERROR;
 
-    strcpy(dirty_abs_path, current_dir);           //get dirty absolute path with /../ or /./
-    strcat(dirty_abs_path, "/");                                                                                                           
-    strcat(dirty_abs_path, current_path);
+    if (N < 2 || N > 6)
+        return INPUT_ERROR;
 
-    curr_elem = curr_dir_len + curr_path_len - 1; //index of the last elem 
-    while(curr_elem > 0){
-        //  dir1/../dir2/  case
-        if(dirty_abs_path[curr_elem] == '.' &&  dirty_abs_path[curr_elem - 1] == '.'){
-            if(dirty_abs_path[curr_elem - 2] != '/'){
-                free(dirty_abs_path);
-                return WRONG_PARAMETER;
-            }
-            
-            ++delete_amount;
-            dirty_abs_path[curr_elem] = dirty_abs_path[curr_elem - 1] = dirty_abs_path[curr_elem - 2] = '\0';
-            curr_elem -= 3;
-        }
-        //  /./ case
-        else if (dirty_abs_path[curr_elem] == '.' && dirty_abs_path[curr_elem - 1] == '/'){
-            dirty_abs_path[curr_elem--] = '\0';
-            dirty_abs_path[curr_elem--] = '\0';
-        }
-        //    dir//dir  case
-        else if(dirty_abs_path[curr_elem] == '/' && dirty_abs_path[curr_elem - 1] == '/'){
-            dirty_abs_path[curr_elem--] = '\0';
-        }
-        else{
-            if(delete_amount > 0){
-                dirty_abs_path[curr_elem--] = '\0'; 
-                while(dirty_abs_path[curr_elem] != '/'){
-                    dirty_abs_path[curr_elem--] = '\0';
-                }
-                dirty_abs_path[curr_elem--] = '\0';
-                --delete_amount;
-            }
-            else{
-                ++valid_char_count;
-                --curr_elem;
+    fp = fopen(filename, "rb");
+    if (!fp)
+        return FILE_OPEN_ERROR;
+
+    while (fread(&byte, 1, 1, fp) == 1)
+    {
+        for (i = 0; i < 8; ++i)
+        {
+            current_bit = (byte >> i) & 1; // Получаем текущий бит
+
+            current_block_value |= (current_bit << bit_count); // Добавляем бит в блок
+
+            bit_count++;
+
+            if (bit_count == block_size_bits)
+            {
+                xor_sum ^= current_block_value;
+                current_block_value = 0;
+                bit_count = 0;
             }
         }
     }
 
-    if(valid_char_count + 1 > FILENAME_MAX){      
-        free(dirty_abs_path);
-        return OVERFLOW;
+    // Обрабатываем последний неполный блок
+    if (bit_count > 0)
+    {
+        xor_sum ^= current_block_value;
     }
 
-    curr_elem = 0;
-    for(int i = 0; i <= (curr_dir_len + curr_path_len); ++i){
-        if (dirty_abs_path[i] != '\0'){
-            absolute_path[curr_elem] = dirty_abs_path[i];
-            ++curr_elem;
+    fclose(fp);
+    *result = xor_sum;
+    return SUCCESS;
+}
+
+status _copy_file(const char *source_filename, const char *dest_filename)
+{
+    int source_fd, dest_fd;
+    char buffer[4096];
+    ssize_t bytes_read, bytes_written;
+
+    if (!source_filename || !dest_filename)
+        return MEMORY_ERROR;
+
+    source_fd = open(source_filename, O_RDONLY);
+    if (source_fd == -1)
+    {
+        return FILE_OPEN_ERROR;
+    }
+
+    dest_fd = open(dest_filename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (dest_fd == -1)
+    {
+        close(source_fd);
+        return FILE_OPEN_ERROR;
+    }
+
+    while ((bytes_read = read(source_fd, buffer, sizeof(buffer))) > 0)
+    {
+        bytes_written = write(dest_fd, buffer, bytes_read);
+        if (bytes_written != bytes_read)
+        {
+            close(source_fd);
+            close(dest_fd);
+            return RW_ERROR;
         }
     }
 
-    free(dirty_abs_path);
-    return COOL;
+    close(source_fd);
+    close(dest_fd);
+
+    if (bytes_read == -1)
+    {
+        close(source_fd);
+        close(dest_fd);
+        return RW_ERROR;
+    }
+
+    return SUCCESS;
+}
+
+status copy_file(const char *file_path, size_t n)
+{
+    pid_t pid;
+    size_t i, base_len;
+    status st, st_ans = SUCCESS;
+    int state;
+    char *dest_filename, *dot;
+
+    if (!file_path)
+        return MEMORY_ERROR;
+
+    dest_filename = (char *)malloc((strlen(file_path) + 36) * sizeof(char));
+    if (!dest_filename)
+        return MEMORY_ERROR;
+
+    dot = strrchr(file_path, '.');
+
+    for (i = 0; i < n; ++i)
+    {
+        pid = fork();
+        if (pid == -1)
+        {
+            free(dest_filename);
+            return FORK_ERROR;
+        }
+
+        else if (pid == 0)
+        {
+            if (!dot)
+            {
+                // Расширение отсутствует
+                sprintf(dest_filename, "%s.%zu", file_path, i);
+            }
+            else
+            {
+                // Расширение присутствует
+                base_len = dot - file_path;
+                sprintf(dest_filename, "%.*s%zu%s", (int)base_len, file_path, i, dot);
+            }
+
+            st = _copy_file(file_path, dest_filename);
+            free(dest_filename);
+            exit(st);
+        }
+    }
+
+    for (i = 0; i < n; i++)
+    {
+        wait(&state);
+        if (state != SUCCESS)
+        {
+            st_ans = state;
+        }
+    }
+    free(dest_filename);
+    return st_ans;
 }
